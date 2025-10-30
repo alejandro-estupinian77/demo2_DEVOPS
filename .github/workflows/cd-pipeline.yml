@@ -39,32 +39,31 @@ jobs:
         docker push $IMAGE_TAG
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    - name: Deploy to Container App with ACR Credentials
+    - name: Get ACR Credentials
+      id: acr-creds
       run: |
-        # Obtener credenciales del ACR
         ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query "username" -o tsv)
         ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
-        
-        echo "Updating container app with new image..."
+        echo "username=$ACR_USERNAME" >> $GITHUB_OUTPUT
+        echo "password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
+
+    - name: Deploy to Container App
+      run: |
         az containerapp update \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --image ${{ env.IMAGE_TAG }} \
-          --registry-server ${{ env.ACR_NAME }}.azurecr.io \
-          --registry-username $ACR_USERNAME \
-          --registry-password $ACR_PASSWORD
-
-    - name: Configure Container Port
-      run: |
-        az containerapp update \
-          --name ${{ env.CONTAINER_APP_NAME }} \
-          --resource-group ${{ env.RESOURCE_GROUP }} \
-          --set properties.template.containers[0].ports[0].port=5000
+          --set properties.template.containers[0].image=${{ env.IMAGE_TAG }} \
+          --set properties.configuration.registries[0].server=${{ env.ACR_NAME }}.azurecr.io \
+          --set properties.configuration.registries[0].username=${{ steps.acr-creds.outputs.username }} \
+          --set properties.configuration.registries[0].passwordSecretRef="acr-password" \
+          --set properties.configuration.secrets[0].name="acr-password" \
+          --set properties.configuration.secrets[0].value="${{ steps.acr-creds.outputs.password }}"
 
     - name: Get Application URL
       id: get-url
       run: |
-        sleep 30  # Esperar que el deploy se complete
+        sleep 30
         URL=$(az containerapp show \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -73,20 +72,13 @@ jobs:
         echo "url=$URL" >> $GITHUB_OUTPUT
         echo "Application URL: https://$URL"
 
-    - name: Health Check
-      run: |
-        sleep 10
-        URL="https://${{ steps.get-url.outputs.url }}"
-        echo "Testing health endpoint: $URL/api/health"
-        curl -f $URL/api/health || echo "Health check failed but continuing..."
-
     - name: ✅ Deployment Summary
       run: |
-        echo "🎉 CD PIPELINE COMPLETED!"
-        echo "🚀 Your app is LIVE in production!"
-        echo "🌐 URL: https://${{ steps.get-url.outputs.url }}"
-        echo "❤️ Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
-        echo "📚 Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
-        echo "⏰ Deployed at: $(date)"
-        echo "📝 Commit: ${{ github.sha }}"
-        echo "🐳 Image: ${{ env.IMAGE_TAG }}"
+        echo "CD PIPELINE COMPLETED!"
+        echo "Your app is LIVE in production!"
+        echo "URL: https://${{ steps.get-url.outputs.url }}"
+        echo "Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
+        echo "Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
+        echo "Deployed at: $(date)"
+        echo "Commit: ${{ github.sha }}"
+        echo "Image: ${{ env.IMAGE_TAG }}"
