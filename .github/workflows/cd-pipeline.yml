@@ -15,70 +15,112 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
 
-    - name: Login to Azure
+    - name: 🔐 Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Enable ACR Admin Account
-      run: |
-        az acr update --name ${{ env.ACR_NAME }} --admin-enabled true
-
-    - name: Login to Azure Container Registry
+    - name: 🔑 Login to Azure Container Registry
       run: |
         az acr login --name ${{ env.ACR_NAME }}
 
-    - name: Build and Push Docker image
+    - name: 🐳 Build and Push Docker image
       run: |
         cd backend
         IMAGE_TAG=${{ env.ACR_NAME }}.azurecr.io/educativa-backend:${{ github.sha }}
+        echo "Building image: $IMAGE_TAG"
         docker build -t $IMAGE_TAG .
+        echo "Pushing image to ACR..."
         docker push $IMAGE_TAG
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    - name: Get ACR Credentials
-      id: acr-creds
+    - name: 🎭 Enable Managed Identity
       run: |
-        ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query "username" -o tsv)
-        ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
-        echo "username=$ACR_USERNAME" >> $GITHUB_OUTPUT
-        echo "password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
+        echo "Enabling managed identity for Container App..."
+        az containerapp identity assign \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --system-assigned || echo "✅ Identity already enabled"
 
-    - name: Deploy to Container App
+    - name: 🔓 Grant ACR Pull permissions
       run: |
+        echo "Getting Principal ID..."
+        PRINCIPAL_ID=$(az containerapp identity show \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --query principalId -o tsv)
+        
+        echo "Principal ID: $PRINCIPAL_ID"
+        
+        echo "Getting ACR resource ID..."
+        ACR_ID=$(az acr show \
+          --name ${{ env.ACR_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --query id -o tsv)
+        
+        echo "ACR ID: $ACR_ID"
+        
+        echo "Assigning AcrPull role..."
+        az role assignment create \
+          --assignee $PRINCIPAL_ID \
+          --role AcrPull \
+          --scope $ACR_ID || echo "✅ Role already assigned"
+
+    - name: 🚀 Deploy to Container App
+      run: |
+        echo "Deploying new revision to Container App..."
+        
+        # Obtener credenciales del ACR
+        ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query username -o tsv)
+        ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+        
+        # Actualizar el Container App con la nueva imagen
         az containerapp update \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --image ${{ env.IMAGE_TAG }} \
-          --set properties.template.containers[0].image=${{ env.IMAGE_TAG }} \
-          --set properties.configuration.registries[0].server=${{ env.ACR_NAME }}.azurecr.io \
-          --set properties.configuration.registries[0].username=${{ steps.acr-creds.outputs.username }} \
-          --set properties.configuration.registries[0].passwordSecretRef="acr-password" \
-          --set properties.configuration.secrets[0].name="acr-password" \
-          --set properties.configuration.secrets[0].value="${{ steps.acr-creds.outputs.password }}"
+          --registry-server ${{ env.ACR_NAME }}.azurecr.io \
+          --registry-username $ACR_USERNAME \
+          --registry-password $ACR_PASSWORD
 
-    - name: Get Application URL
+    - name: 🌐 Get Application URL
       id: get-url
       run: |
-        sleep 30
+        echo "Retrieving application URL..."
         URL=$(az containerapp show \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --query properties.configuration.ingress.fqdn \
           --output tsv)
         echo "url=$URL" >> $GITHUB_OUTPUT
-        echo "Application URL: https://$URL"
+        echo "✅ Application URL: https://$URL"
 
     - name: ✅ Deployment Summary
       run: |
-        echo "CD PIPELINE COMPLETED!"
-        echo "Your app is LIVE in production!"
-        echo "URL: https://${{ steps.get-url.outputs.url }}"
-        echo "Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
-        echo "Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
-        echo "Deployed at: $(date)"
-        echo "Commit: ${{ github.sha }}"
-        echo "Image: ${{ env.IMAGE_TAG }}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "🎉  CD PIPELINE COMPLETED SUCCESSFULLY!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "🚀  Application Status: LIVE in Production"
+        echo ""
+        echo "🌐  Application URL:"
+        echo "    https://${{ steps.get-url.outputs.url }}"
+        echo ""
+        echo "🔍  API Endpoints:"
+        echo "    ❤️  Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
+        echo "    📚  Courses API:  https://${{ steps.get-url.outputs.url }}/api/courses"
+        echo ""
+        echo "📊  Deployment Info:"
+        echo "    ⏰  Deployed at: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+        echo "    📝  Commit SHA:  ${{ github.sha }}"
+        echo "    🏷️   Short SHA:   ${GITHUB_SHA:0:7}"
+        echo "    👤  Triggered by: ${{ github.actor }}"
+        echo "    🔖  Branch:      ${{ github.ref_name }}"
+        echo ""
+        echo "🐳  Container Image:"
+        echo "    ${{ env.IMAGE_TAG }}"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
