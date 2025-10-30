@@ -2,6 +2,7 @@
   "name": "educativa-backend",
   "version": "1.0.0",
   "type": "commonjs",
+  "main": "src/server.js",
   "engines": {
     "node": "18.x"
   },
