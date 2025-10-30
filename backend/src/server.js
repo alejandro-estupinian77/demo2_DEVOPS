@@ -88,7 +88,7 @@ app.post('/api/courses', (req, res) => {
 
     // Encontrar el próximo ID disponible
     const nextId = courses.length > 0 
-      ? Math.max(...courses.map(c => c.id)) + 1 
+      ? Math.max(...courses.map(c => c.id))
       : 1;
 
     const newCourse = {
@@ -161,5 +161,29 @@ app.use('*', (req, res) => {
   });
 });
 
-// Exportar solo la app para testing
-module.exports = { app };
+// ✅ AGREGAR ESTO AL FINAL - INICIAR EL SERVIDOR
+const PORT = process.env.PORT || 5000;
+
+// Solo iniciar el servidor si no estamos en modo test
+if (process.env.NODE_ENV !== 'test') {
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Servidor backend ejecutándose en http://localhost:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✅ Health check disponible en: http://localhost:${PORT}/api/health`);
+    console.log(`📚 Cursos disponibles en: http://localhost:${PORT}/api/courses`);
+  });
+
+  // Manejo graceful de shutdown
+  process.on('SIGTERM', () => {
+    console.log('🛑 Recibió SIGTERM, cerrando servidor...');
+    server.close(() => {
+      console.log('✅ Servidor cerrado exitosamente');
+      process.exit(0);
+    });
+  });
+
+  module.exports = { app, server };
+} else {
+  // En testing, exportar solo la app sin iniciar servidor
+  module.exports = { app };
+}

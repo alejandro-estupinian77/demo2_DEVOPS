@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Educativa</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎓 Plataforma Educativa</h1>
+            <p>Gestión de Cursos - Backend con CI/CD</p>
+        </header>
+
+        <main class="main">
+            <!-- Formulario para crear cursos -->
+            <section class="form-section">
+                <h2>Crear Nuevo Curso</h2>
+                <form id="courseForm" class="course-form">
+                    <div class="form-group">
+                        <label for="title">Título del Curso:</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="students">Número de Estudiantes:</label>
+                        <input type="number" id="students" name="students" value="0" min="0">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Crear Curso</button>
+                </form>
+            </section>
+
+            <!-- Lista de cursos -->
+            <section class="courses-section">
+                <h2>Cursos Disponibles</h2>
+                <div class="controls">
+                    <button id="loadCourses" class="btn btn-secondary">Cargar Cursos</button>
+                    <span id="courseCount" class="course-count">0 cursos</span>
+                </div>
+                <div id="coursesList" class="courses-grid">
+                    <!-- Los cursos se cargarán aquí dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Información del sistema -->
+            <section class="info-section">
+                <h2>Estado del Sistema</h2>
+                <div class="status-cards">
+                    <div class="status-card">
+                        <h3>Backend API</h3>
+                        <p id="apiStatus">Verificando...</p>
+                    </div>
+                    <div class="status-card">
+                        <h3>Última Actualización</h3>
+                        <p id="lastUpdate">-</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Desarrollado con CI/CD Pipeline | Backend: Node.js + Express</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

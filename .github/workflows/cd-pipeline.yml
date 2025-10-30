@@ -1,0 +1,63 @@
+name: 🚀 CD - Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [ master ]  # ← CAMBIADO de main a master
+
+env:
+  CONTAINER_APP_NAME: 'educativa-platform'
+  RESOURCE_GROUP: 'plataforma_edu'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build Docker image
+      run: |
+        cd backend
+        docker build -t educativa-backend:${{ github.sha }} .
+
+    - name: 🚀 Deploy to Container App
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        containerAppName: ${{ env.CONTAINER_APP_NAME }}
+        resourceGroup: ${{ env.RESOURCE_GROUP }}
+        imageToDeploy: educativa-backend:${{ github.sha }}
+
+    - name: Configure Container Port
+      run: |
+        az containerapp update \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --set properties.template.containers[0].ports[0].port=5000
+
+    - name: Get Application URL
+      id: get-url
+      run: |
+        URL=$(az containerapp show \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --query properties.configuration.ingress.fqdn \
+          --output tsv)
+        echo "url=$URL" >> $GITHUB_OUTPUT
+        echo "Application URL: https://$URL"
+
+    - name: Verify Deployment
+      run: |
+        echo "CD PIPELINE COMPLETED!"
+        echo "Your app is LIVE in production!"
+        echo "URL: https://${{ steps.get-url.outputs.url }}"
+        echo "Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
+        echo "Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
+        echo "Deployed at: $(date)"
+        echo "Commit: ${{ github.sha }}"
