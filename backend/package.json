@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --detectOpenHandles --forceExit --coverage",
+    "test:unit": "jest tests/unit --detectOpenHandles --forceExit --coverage",
+    "test:integration": "jest tests/integration --detectOpenHandles --forceExit --verbose",
+    "test:stress": "node tests/stress/artillery-runner.js",
+    "test:stress:basic": "jest tests/stress --detectOpenHandles --forceExit",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:stress:basic",
+    "docker:build": "docker build -t educativa-backend .",
+    "docker:run": "docker run -p 5000:5000 educativa-backend",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix"
+  }
+}
