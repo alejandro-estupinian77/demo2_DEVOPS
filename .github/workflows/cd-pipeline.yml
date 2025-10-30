@@ -3,12 +3,12 @@ name: CD - Deploy to Azure Container Apps
 on:
   push:
     branches: [ master ]
-  workflow_dispatch:  # ← Para poder ejecutarlo manualmente
+  workflow_dispatch:
 
 env:
   CONTAINER_APP_NAME: 'plataforma-edu'
   RESOURCE_GROUP: 'plataforma_edu'
-  CONTAINER_REGISTRY: 'plataformaedu.azurecr.io'  # ← Necesitas tu ACR
+  ACR_NAME: 'plataformaedu'
 
 jobs:
   deploy:
@@ -23,29 +23,46 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # ← AGREGADO: Login al Container Registry
     - name: Login to Azure Container Registry
       run: |
-        az acr login --name plataformaedu
+        az acr login --name ${{ env.ACR_NAME }}
 
-    # ← CORREGIDO: Build y Push la imagen al ACR
     - name: Build and Push Docker image
       run: |
         cd backend
-        IMAGE_TAG=${{ env.CONTAINER_REGISTRY }}/educativa-backend:${{ github.sha }}
+        IMAGE_TAG=${{ env.ACR_NAME }}.azurecr.io/educativa-backend:${{ github.sha }}
         docker build -t $IMAGE_TAG .
         docker push $IMAGE_TAG
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    # ← CORREGIDO: Deploy usando la imagen del ACR
+    # ⭐ NUEVO: Habilitar Managed Identity si no está habilitada
+    - name: Enable Managed Identity
+      run: |
+        az containerapp identity assign \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --system-assigned || echo "Identity already enabled"
+
+    # ⭐ NUEVO: Asignar permisos AcrPull
+    - name: Grant ACR Pull permissions
+      run: |
+        PRINCIPAL_ID=$(az containerapp identity show \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --query principalId -o tsv)
+        
+        az role assignment create \
+          --assignee $PRINCIPAL_ID \
+          --role AcrPull \
+          --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.ContainerRegistry/registries/${{ env.ACR_NAME }} \
+          --only-show-errors || echo "Role already assigned"
+
     - name: 🚀 Deploy to Container App
       run: |
         az containerapp update \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --image ${{ env.IMAGE_TAG }}
-
-    # ← ELIMINADO: Configure Container Port (esto se hace en la primera creación del Container App)
 
     - name: Get Application URL
       id: get-url
@@ -58,9 +75,9 @@ jobs:
         echo "url=$URL" >> $GITHUB_OUTPUT
         echo "Application URL: https://$URL"
 
-    - name: Verify Deployment
+    - name: ✅ Deployment Summary
       run: |
-        echo "✅ CD PIPELINE COMPLETED!"
+        echo "🎉 CD PIPELINE COMPLETED!"
         echo "🚀 Your app is LIVE in production!"
         echo "🌐 URL: https://${{ steps.get-url.outputs.url }}"
         echo "❤️ Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
