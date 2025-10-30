@@ -182,9 +182,14 @@ if (process.env.NODE_ENV !== 'test') {
       process.exit(0);
     });
   });
+}
 
+// Al final de tu src/server.js debe tener:
+if (process.env.NODE_ENV !== 'test') {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+  });
   module.exports = { app, server };
 } else {
-  // En testing, exportar solo la app sin iniciar servidor
   module.exports = { app };
 }
