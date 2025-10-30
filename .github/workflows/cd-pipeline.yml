@@ -6,7 +6,7 @@ on:
   workflow_dispatch:  # ← Para poder ejecutarlo manualmente
 
 env:
-  CONTAINER_APP_NAME: 'educativa-platform'
+  CONTAINER_APP_NAME: 'plataforma-edu'
   RESOURCE_GROUP: 'plataforma_edu'
   CONTAINER_REGISTRY: 'plataformaedu.azurecr.io'  # ← Necesitas tu ACR
 
