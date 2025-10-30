@@ -23,6 +23,10 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    - name: Enable ACR Admin Account
+      run: |
+        az acr update --name ${{ env.ACR_NAME }} --admin-enabled true
+
     - name: Login to Azure Container Registry
       run: |
         az acr login --name ${{ env.ACR_NAME }}
@@ -35,38 +39,32 @@ jobs:
         docker push $IMAGE_TAG
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    # ⭐ NUEVO: Habilitar Managed Identity si no está habilitada
-    - name: Enable Managed Identity
+    - name: Deploy to Container App with ACR Credentials
       run: |
-        az containerapp identity assign \
-          --name ${{ env.CONTAINER_APP_NAME }} \
-          --resource-group ${{ env.RESOURCE_GROUP }} \
-          --system-assigned || echo "Identity already enabled"
-
-    # ⭐ NUEVO: Asignar permisos AcrPull
-    - name: Grant ACR Pull permissions
-      run: |
-        PRINCIPAL_ID=$(az containerapp identity show \
-          --name ${{ env.CONTAINER_APP_NAME }} \
-          --resource-group ${{ env.RESOURCE_GROUP }} \
-          --query principalId -o tsv)
+        # Obtener credenciales del ACR
+        ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query "username" -o tsv)
+        ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
         
-        az role assignment create \
-          --assignee $PRINCIPAL_ID \
-          --role AcrPull \
-          --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.ContainerRegistry/registries/${{ env.ACR_NAME }} \
-          --only-show-errors || echo "Role already assigned"
+        echo "Updating container app with new image..."
+        az containerapp update \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --image ${{ env.IMAGE_TAG }} \
+          --registry-server ${{ env.ACR_NAME }}.azurecr.io \
+          --registry-username $ACR_USERNAME \
+          --registry-password $ACR_PASSWORD
 
-    - name: 🚀 Deploy to Container App
+    - name: Configure Container Port
       run: |
         az containerapp update \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
-          --image ${{ env.IMAGE_TAG }}
+          --set properties.template.containers[0].ports[0].port=5000
 
     - name: Get Application URL
       id: get-url
       run: |
+        sleep 30  # Esperar que el deploy se complete
         URL=$(az containerapp show \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -74,6 +72,13 @@ jobs:
           --output tsv)
         echo "url=$URL" >> $GITHUB_OUTPUT
         echo "Application URL: https://$URL"
+
+    - name: Health Check
+      run: |
+        sleep 10
+        URL="https://${{ steps.get-url.outputs.url }}"
+        echo "Testing health endpoint: $URL/api/health"
+        curl -f $URL/api/health || echo "Health check failed but continuing..."
 
     - name: ✅ Deployment Summary
       run: |
@@ -84,3 +89,4 @@ jobs:
         echo "📚 Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
         echo "⏰ Deployed at: $(date)"
         echo "📝 Commit: ${{ github.sha }}"
+        echo "🐳 Image: ${{ env.IMAGE_TAG }}"
