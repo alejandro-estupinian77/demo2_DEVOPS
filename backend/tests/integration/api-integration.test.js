@@ -106,7 +106,7 @@ describe('Pruebas de integración - API Completa', () => {
             for (let i = 0; i < numCourses; i++) {
                 const promise = request(app)
                     .post('/api/courses')
-                    .send({ title: `Curso Concurrente ${i + 1}`, students: i * 5 });
+                    .send({ title: `Curso Concurrente ${i}`, students: i * 5 });
 
                 coursePromises.push(promise);
             }
@@ -115,7 +115,7 @@ describe('Pruebas de integración - API Completa', () => {
 
             results.forEach((response, index) => {
                 expect(response.status).toBe(201);
-                expect(response.body.data.title).toBe(`Curso Concurrente ${index + 1}`);
+                expect(response.body.data.title).toBe(`Curso Concurrente ${index}`);
             });
 
             const finalResponse = await request(app).get('/api/courses');

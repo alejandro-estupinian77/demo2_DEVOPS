@@ -21,7 +21,8 @@ let courses = [...initialCourses];
 
 // Función para resetear datos (útil en pruebas)
 app.resetData = function() {
-  courses = [...initialCourses];
+  courses = JSON.parse(JSON.stringify(initialCourses)); // Deep copy
+  console.log('Datos reseteados para pruebas'); // Para debug
 };
 
 // Routes
@@ -88,7 +89,7 @@ app.post('/api/courses', (req, res) => {
 
     // Encontrar el próximo ID disponible
     const nextId = courses.length > 0 
-      ? Math.max(...courses.map(c => c.id))
+      ? Math.max(...courses.map(c => c.id)) + 1
       : 1;
 
     const newCourse = {
