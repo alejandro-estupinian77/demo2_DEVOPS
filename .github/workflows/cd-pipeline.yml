@@ -69,22 +69,35 @@ jobs:
           --role AcrPull \
           --scope $ACR_ID || echo "✅ Role already assigned"
 
-    - name: 🚀 Deploy to Container App
+    - name: 🔧 Configure Registry Credentials
       run: |
-        echo "Deploying new revision to Container App..."
+        echo "Configuring ACR credentials for Container App..."
+        
+        # Habilitar admin en el ACR si no está habilitado
+        az acr update --name ${{ env.ACR_NAME }} --admin-enabled true
         
         # Obtener credenciales del ACR
         ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query username -o tsv)
         ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
         
-        # Actualizar el Container App con la nueva imagen
+        # Configurar las credenciales del registry en el Container App
+        az containerapp registry set \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --server ${{ env.ACR_NAME }}.azurecr.io \
+          --username $ACR_USERNAME \
+          --password $ACR_PASSWORD
+
+    - name: 🚀 Deploy to Container App
+      run: |
+        echo "Deploying new revision to Container App..."
+        
+        # Actualizar solo la imagen del contenedor backend
         az containerapp update \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --image ${{ env.IMAGE_TAG }} \
-          --registry-server ${{ env.ACR_NAME }}.azurecr.io \
-          --registry-username $ACR_USERNAME \
-          --registry-password $ACR_PASSWORD
+          --container-name educativa-backend
 
     - name: 🌐 Get Application URL
       id: get-url
