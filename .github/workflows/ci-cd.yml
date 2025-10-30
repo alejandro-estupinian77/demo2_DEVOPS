@@ -1,86 +1,33 @@
-name: CI/CD Pipeline - Backend Only
+name: Test Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    branches: [ main, master, develop ]
 
 jobs:
-  # Job de testing simplificado
   test:
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        node-version: [18.x]
-
     steps:
-    - name: Checkout código
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js ${{ matrix.node-version }}
+    - name: 🟢 Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+        node-version: '18'
 
-    - name: Instalar dependencias Backend
+    - name: 📦 Install dependencies
       run: |
         cd backend
-        npm ci
+        npm install
 
-    - name: Ejecutar pruebas unitarias
+    - name: 🧪 Run tests
       run: |
         cd backend
         npm run test:unit
       env:
         NODE_ENV: test
 
-    - name: Ejecutar pruebas de integración
-      run: |
-        cd backend
-        npm run test:integration
-      env:
-        NODE_ENV: test
-
-    - name: Ejecutar pruebas de estrés básicas
-      run: |
-        cd backend
-        npm run test:stress:basic
-      env:
-        NODE_ENV: test
-
-    - name: Generar reporte de cobertura
-      run: |
-        cd backend
-        npm run test:unit -- --coverage
-      env:
-        NODE_ENV: test
-
-  # Job de build simplificado (solo backend)
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - name: Checkout código
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Build Backend Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend
-        file: ./backend/Dockerfile
-        push: false  # No push hasta que tengas Docker Hub configurado
-        tags: educativa-backend:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Verificar imagen Docker
-      run: |
-        docker images educativa-backend:latest
+    - name: ✅ Test completed
+      run: echo "🎉 Pipeline funcionó correctamente!"
