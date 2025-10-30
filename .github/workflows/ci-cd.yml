@@ -9,25 +9,41 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: 🟢 Setup Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
 
-    - name: 📦 Install dependencies
+    - name: Install ALL dependencies
       run: |
         cd backend
-        npm install
+        npm ci --include=dev  # ← ESTA ES LA CLAVE
 
-    - name: 🧪 Run tests
+    - name: Run unit tests
       run: |
         cd backend
         npm run test:unit
       env:
         NODE_ENV: test
 
-    - name: ✅ Test completed
-      run: echo "🎉 Pipeline funcionó correctamente!"
+    - name: Run integration tests
+      run: |
+        cd backend
+        npm run test:integration
+      env:
+        NODE_ENV: test
+
+    - name: Run basic stress tests
+      run: |
+        cd backend
+        npm run test:stress:basic
+      env:
+        NODE_ENV: test
+
+    - name: Tests completed
+      run: echo "All tests passed!"
