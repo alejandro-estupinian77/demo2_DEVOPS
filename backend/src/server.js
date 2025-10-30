@@ -186,7 +186,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Al final de tu src/server.js debe tener:
 if (process.env.NODE_ENV !== 'test') {
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
   });
   module.exports = { app, server };
