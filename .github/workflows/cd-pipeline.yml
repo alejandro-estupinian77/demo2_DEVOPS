@@ -6,7 +6,7 @@ on:
   workflow_dispatch:  # ← Para poder ejecutarlo manualmente
 
 env:
-  CONTAINER_APP_NAME: 'plataforma-edu'
+  CONTAINER_APP_NAME: 'educativa-platform'
   RESOURCE_GROUP: 'plataforma_edu'
   CONTAINER_REGISTRY: 'plataformaedu.azurecr.io'  # ← Necesitas tu ACR
 
@@ -60,10 +60,10 @@ jobs:
 
     - name: Verify Deployment
       run: |
-        echo "CD PIPELINE COMPLETED!"
-        echo "Your app is LIVE in production!"
-        echo "URL: https://${{ steps.get-url.outputs.url }}"
-        echo "Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
-        echo "Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
-        echo "Deployed at: $(date)"
-        echo "Commit: ${{ github.sha }}"
+        echo "✅ CD PIPELINE COMPLETED!"
+        echo "🚀 Your app is LIVE in production!"
+        echo "🌐 URL: https://${{ steps.get-url.outputs.url }}"
+        echo "❤️ Health Check: https://${{ steps.get-url.outputs.url }}/api/health"
+        echo "📚 Courses API: https://${{ steps.get-url.outputs.url }}/api/courses"
+        echo "⏰ Deployed at: $(date)"
+        echo "📝 Commit: ${{ github.sha }}"
