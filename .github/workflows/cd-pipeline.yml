@@ -15,19 +15,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: 🔐 Login to Azure
+    - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: 🔑 Login to Azure Container Registry
+    - name: Login to Azure Container Registry
       run: |
         az acr login --name ${{ env.ACR_NAME }}
 
-    - name: 🐳 Build and Push Docker image
+    - name: Build and Push Docker image
       run: |
         cd backend
         IMAGE_TAG=${{ env.ACR_NAME }}.azurecr.io/educativa-backend:${{ github.sha }}
@@ -37,7 +37,7 @@ jobs:
         docker push $IMAGE_TAG
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    - name: 🎭 Enable Managed Identity
+    - name: Enable Managed Identity
       run: |
         echo "Enabling managed identity for Container App..."
         az containerapp identity assign \

@@ -162,16 +162,15 @@ app.use('*', (req, res) => {
   });
 });
 
-// ✅ AGREGAR ESTO AL FINAL - INICIAR EL SERVIDOR
 const PORT = process.env.PORT || 5000;
 
 // Solo iniciar el servidor si no estamos en modo test
 if (process.env.NODE_ENV !== 'test') {
   const server = app.listen(PORT, () => {
-    console.log(`🚀 Servidor backend ejecutándose en http://localhost:${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`✅ Health check disponible en: http://localhost:${PORT}/api/health`);
-    console.log(`📚 Cursos disponibles en: http://localhost:${PORT}/api/courses`);
+    console.log(`Servidor backend ejecutándose en http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Health check disponible en: http://localhost:${PORT}/api/health`);
+    console.log(`Cursos disponibles en: http://localhost:${PORT}/api/courses`);
   });
 
   // Manejo graceful de shutdown
@@ -187,7 +186,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Al final de tu src/server.js debe tener:
 if (process.env.NODE_ENV !== 'test') {
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+    console.log(`Servidor ejecutándose en puerto ${PORT}`);
   });
   module.exports = { app, server };
 } else {

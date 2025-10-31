@@ -19,12 +19,12 @@ jobs:
       with:
         node-version: '18.x'
 
-    - name: 📦 Install dependencies
+    - name: Install dependencies
       run: |
         cd backend
         npm install
 
-    - name: 🧪 Run all tests
+    - name: Run all tests
       run: |
         cd backend
         npm run test:unit
